@@ -4,7 +4,6 @@ const drawCompanies = (companies) => {
   const width = chartSize.width - margin.left - margin.right;
   const height = chartSize.height - margin.top - margin.bottom;
 
-
   const maxCmp = _.maxBy(companies, 'CMP').CMP;
 
   const y = d3.scaleLinear()
@@ -16,8 +15,10 @@ const drawCompanies = (companies) => {
     .domain(_.map(companies, 'Name'))
     .padding(0.3);
 
+  const c = d3.scaleOrdinal(d3.schemeCategory10);
+
   const yAxis = d3.axisLeft(y)
-    .tickFormat(d => 'Rs.' + d)
+    .tickFormat(d => '₹' + d)
     .ticks(10);
 
   const xAxis = d3.axisBottom(x);
@@ -35,10 +36,11 @@ const drawCompanies = (companies) => {
 
   const newRectangles = rectangles.enter()
     .append("rect")
-    .attr("y", c => y(c.CMP))
-    .attr("x", c => x(c.Name))
+    .attr("y", co => y(co.CMP))
+    .attr("x", co => x(co.Name))
     .attr("width", x.bandwidth)
-    .attr("height", c => y(0) - y(c.CMP));
+    .attr("height", co => y(0) - y(co.CMP))
+    .attr('fill', co => c(co.Name));
 
   g.append("text")
     .attr("class", "x axis-label")
@@ -69,15 +71,13 @@ const drawCompanies = (companies) => {
     .attr('y', 10);
 }
 
+const parseCompany = ({ Name, ...numerics }) => {
+  _.forEach(numerics, (v, k) => numerics[k] = +v);
+  return { Name, ...numerics };
+}
+
 const main = () => {
-  d3.csv('data/companies.csv', company => {
-    return {
-      Name: company.Name,
-      CMP: +company.CMP,
-      MarketCap: +company.MarketCap,
-      PE: +company.PE
-    }
-  })
+  d3.csv('data/companies.csv', parseCompany)
     .then(drawCompanies);
 }
 window.onload = main;
