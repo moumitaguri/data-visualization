@@ -5,3 +5,9 @@ svg {
 rect {
   fill: grey;
 }
+
+.axis-label {
+  font-size: 20px;
+  text-anchor: middle;
+}
+
