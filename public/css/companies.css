@@ -1,0 +1,13 @@
+svg {
+  border: 1px solid grey;
+}
+
+rect {
+  fill: grey;
+}
+
+.axis-label {
+  font-size: 20px;
+  text-anchor: middle;
+}
+
