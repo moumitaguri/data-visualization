@@ -11,3 +11,6 @@ rect {
   text-anchor: middle;
 }
 
+.x-axis {
+  font-weight: bold;
+}
