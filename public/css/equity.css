@@ -1,0 +1,20 @@
+svg {
+  border: 1px solid grey;
+}
+
+
+
+.axis-label {
+  font-size: 20px;
+  text-anchor: middle;
+}
+
+.x-axis {
+  font-weight: bold;
+}
+
+.close {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 2px;
+}
