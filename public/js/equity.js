@@ -1,4 +1,4 @@
-const chartSize = { width: 800, height: 600 };
+const chartSize = { width: 1200, height: 700 };
 const margin = { left: 100, right: 10, top: 10, bottom: 150 };
 const width = chartSize.width - margin.left - margin.right;
 const height = chartSize.height - margin.top - margin.bottom;
@@ -27,9 +27,13 @@ const initChart = (quotes) => {
     .range([0, width])
     .domain([new Date(firstDate), new Date(lastDate)]);
 
-  const line = d3.line()
-    .x(q => x(new Date(q.Date)))
+  const closeLine = d3.line()
+    .x(q => x(q.Time))
     .y(q => y(q.Close));
+
+  const smaLine = d3.line()
+    .x(q => x(q.Time))
+    .y(q => y(q.SMA));
 
   const yAxis = d3.axisLeft(y).ticks(8);
 
@@ -59,7 +63,11 @@ const initChart = (quotes) => {
 
   g.append("path")
     .attr("class", "close")
-    .attr("d", line(quotes));
+    .attr("d", closeLine(quotes));
+
+  g.append("path")
+    .attr("class", "sma")
+    .attr("d", smaLine(_.drop(quotes, 100)));
 
   g.selectAll(".x-axis text")
     .attr("transform", `rotate(-40)`)
@@ -109,11 +117,25 @@ const updateChart = (quotes, field) => {
 
 const parseData = ({ Date, Volume, AdjClose, ...numerics }) => {
   _.forEach(numerics, (v, k) => numerics[k] = +v);
-  return { Date, ...numerics };
+  const Time = new window.Date(Date);
+  return { Date, Time, ...numerics };
 }
+
+const addSMADetails = data => {
+  data.map((val, i) => {
+    val.SMA = 0;
+    if (i >= 99)
+      val.SMA =
+        data.slice(i - 99, i + 1).reduce((init, val) => init + val.Close, 0) /
+        100;
+  });
+};
 
 const main = () => {
   d3.csv('data/nifty.csv', parseData)
-    .then(initChart);
+    .then((d) => {
+      addSMADetails(d)
+      initChart(d)
+    })
 }
 window.onload = main;
