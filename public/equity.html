@@ -8,6 +8,9 @@
   <title>Equity</title>
   <!-- <link rel="stylesheet" href="css/bootstrap.min.css"> -->
   <link rel="stylesheet" href="css/equity.css">
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://cdn.rawgit.com/RasmusFonseca/d3RangeSlider/master/d3RangeSlider.js"></script>
+  <link href="https://cdn.rawgit.com/RasmusFonseca/d3RangeSlider/master/d3RangeSlider.css" rel="stylesheet">
 </head>
 
 <body>
@@ -18,9 +21,11 @@
   <div class="container">
     <div class="row">
       <div id="chart-area">
+        <div id="slider-container"></div>
+        <div id="slider-label"></div>
         <svg></svg>
       </div>
-      
+
     </div>
   </div>
 </body>

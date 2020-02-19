@@ -5,11 +5,8 @@ const height = chartSize.height - margin.top - margin.bottom;
 
 const initChart = (quotes) => {
 
-  const maxClose = _.maxBy(quotes, 'Close').Close;
-  const minClose = _.minBy(quotes, 'Close').Close;
-
-  const firstDate = _.first(quotes).Date;
-  const lastDate = _.last(quotes).Date;
+  const firstDate = new Date(_.first(quotes).Date);
+  const lastDate = new Date(_.last(quotes).Date);
 
   const chartContainer = d3.select('#chart-area svg')
     .attr("height", chartSize.height)
@@ -18,26 +15,6 @@ const initChart = (quotes) => {
   const g = chartContainer.append("g")
     .attr("class", "prices")
     .attr("transform", `translate(${margin.left},${margin.top})`);
-
-  const y = d3.scaleLinear()
-    .domain([minClose, maxClose])
-    .range([height, 0]);
-
-  const x = d3.scaleTime()
-    .range([0, width])
-    .domain([new Date(firstDate), new Date(lastDate)]);
-
-  const closeLine = d3.line()
-    .x(q => x(q.Time))
-    .y(q => y(q.Close));
-
-  const smaLine = d3.line()
-    .x(q => x(q.Time))
-    .y(q => y(q.SMA));
-
-  const yAxis = d3.axisLeft(y).ticks(8);
-
-  const xAxis = d3.axisBottom(x);
 
   g.append("text")
     .attr("class", "x axis-label")
@@ -53,13 +30,72 @@ const initChart = (quotes) => {
     .text("Prices");
 
   g.append("g")
-    .attr("class", "y-axis")
-    .call(yAxis);
+    .attr("class", "y-axis");
+
+  const startTime = firstDate.getTime();
+  const lastTime = lastDate.getTime();
+
+  const slider = createD3RangeSlider(startTime, lastTime, "#slider-container");
+
+  slider.onChange(function (newRange) {
+    let beginDate = getSliderDate(newRange.begin);
+    let endDate = getSliderDate(newRange.end);
+
+    d3.select("#slider-label")
+      .text(beginDate + " - " + endDate);
+    let newQuotes = getSliderQuotes(quotes, beginDate, endDate);
+    updateChart(newQuotes);
+  });
+
+  slider.range(startTime, lastTime);
+
+}
+
+const getSliderDate = date => new Date(date).toJSON().split("T")[0];
+const getSliderQuotes = (quotes, begin, end) => quotes.filter(q => q.Date >= begin && q.Date <= end);
+
+const updateChart = (quotes) => {
+  const maxClose = _.maxBy(quotes, 'Close').Close;
+  const minClose = _.minBy(quotes, 'Close').Close;
+  const firstDate = new Date(_.first(quotes).Date);
+  const lastDate = new Date(_.last(quotes).Date);
+
+  const y = d3.scaleLinear()
+    .domain([minClose, maxClose])
+    .range([height, 0]);
+
+  const x = d3.scaleTime()
+    .range([0, width])
+    .domain([firstDate, lastDate]);
+
+  const closeLine = d3.line()
+    .x(q => x(q.Time))
+    .y(q => y(q.Close));
+
+  const smaLine = d3.line()
+    .x(q => x(q.Time))
+    .y(q => y(q.SMA));
+
+  const yAxis = d3.axisLeft(y).ticks(8);
+  const xAxis = d3.axisBottom(x);
+
+  const svg = d3.select('#chart-area svg')
+  const g = svg.select(".prices");
 
   g.append("g")
     .attr("class", "x-axis")
     .attr("transform", `translate(0,${height})`)
+
+  svg.select(".y-axis")
+    .call(yAxis);
+
+  svg.select(".x-axis")
     .call(xAxis);
+
+  svg.select("path.close")
+    .remove();
+  svg.select("path.sma")
+    .remove();
 
   g.append("path")
     .attr("class", "close")
@@ -69,50 +105,11 @@ const initChart = (quotes) => {
     .attr("class", "sma")
     .attr("d", smaLine(_.drop(quotes, 100)));
 
-  g.selectAll(".x-axis text")
+  svg.selectAll(".x-axis text")
     .attr("transform", `rotate(-40)`)
     .attr("text-anchor", "end")
     .attr('x', -5)
     .attr('y', 10);
-}
-
-const updateChart = (quotes, field) => {
-  const svg = d3.select('#chart-area svg');
-  svg.select(".y.axis-label")
-    .text(field);
-
-  const y = d3.scaleLinear()
-    .domain([0, _.maxBy(quotes, field)[field]])
-    .range([height, 0]);
-
-  const yAxis = d3.axisLeft(y)
-    .tickFormat(formats[field])
-    .ticks(10);
-
-  svg.select(".y-axis")
-    .call(yAxis);
-
-  const t = d3.transition()
-    .duration(1000)
-    .ease(d3.easeLinear);
-
-
-  const x = d3.scaleBand()
-    .range([0, width])
-    .domain(_.map(quotes, 'Name'))
-    .padding(0.3);
-
-  const xAxis = d3.axisBottom(x);
-
-  svg.select(".x-axis")
-    .call(xAxis);
-
-  svg.selectAll("rect")
-    .data(quotes, c => c.Name)
-    .transition(t)
-    .attr("y", c => y(c[field]))
-    .attr("x", c => x(c.Name))
-    .attr("height", c => y(0) - y(c[field]))
 }
 
 const parseData = ({ Date, Volume, AdjClose, ...numerics }) => {
@@ -136,6 +133,7 @@ const main = () => {
     .then((d) => {
       addSMADetails(d)
       initChart(d)
+      updateChart(d)
     })
 }
 window.onload = main;

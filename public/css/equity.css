@@ -22,3 +22,9 @@ svg {
   stroke: black;
   stroke-width: 2px;
 }
+
+#slider-container {
+  margin-top: 10px;
+  height:40px;
+  background-color: #eeeef5;
+}
