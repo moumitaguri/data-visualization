@@ -38,8 +38,8 @@ const initChart = (quotes) => {
   const slider = createD3RangeSlider(startTime, lastTime, "#slider-container");
 
   slider.onChange(function (newRange) {
-    let beginDate = getSliderDate(newRange.begin);
-    let endDate = getSliderDate(newRange.end);
+    let beginDate = dateFormat(newRange.begin);
+    let endDate = dateFormat(newRange.end);
 
     d3.select("#slider-label")
       .text(beginDate + " - " + endDate);
@@ -51,10 +51,10 @@ const initChart = (quotes) => {
 
 }
 
-const getSliderDate = date => new Date(date).toJSON().split("T")[0];
+const dateFormat = date => new Date(date).toJSON().split("T")[0];
 const getSliderQuotes = (quotes, begin, end) => quotes.filter(q => q.Date >= begin && q.Date <= end);
 
-const updateChart = (quotes) => {
+const updateChart = (quotes, blocks) => {
   const maxClose = _.maxBy(quotes, 'Close').Close;
   const minClose = _.minBy(quotes, 'Close').Close;
   const firstDate = new Date(_.first(quotes).Date);
@@ -103,7 +103,7 @@ const updateChart = (quotes) => {
 
   g.append("path")
     .attr("class", "sma")
-    .attr("d", smaLine(_.drop(quotes, 100)));
+    .attr("d", smaLine(_.drop(quotes, blocks)));
 
   svg.selectAll(".x-axis text")
     .attr("transform", `rotate(-40)`)
@@ -118,33 +118,44 @@ const parseData = ({ Date, Volume, AdjClose, ...numerics }) => {
   return { Date, Time, ...numerics };
 }
 
-const addSMADetails = (data, smaPeriod) => {
-  data.map((val, i) => {
+const addSMA = (quotes, smaPeriod) => {
+  const offset = +d3.select("#offset").property("value");
+  quotes.map((val, i) => {
     val.SMA = 0;
-    if (i >= smaPeriod)
+    let blocks = smaPeriod + offset;
+    if (i >= blocks)
       val.SMA =
-        data.slice(i - smaPeriod, i + 1).reduce((init, val) => init + val.Close, 0) /
+        quotes.slice(i - blocks, i - offset + 1).reduce((init, val) => init + val.Close, 0) /
         smaPeriod;
   });
+
 };
 
-const changeGraph = (quotes,smaPeriod) =>{
-  addSMADetails(quotes, smaPeriod);
-  updateChart(quotes)
+const changeGraph = (quotes, smaPeriod) => {
+  const offset = +d3.select("#offset").property("value");
+  const blocks = offset + smaPeriod;
+  addSMA(quotes, smaPeriod);
+  updateChart(quotes, blocks)
 }
 
-const userInputs = (quotes) =>{
+const userInputs = (quotes) => {
   d3.select("#sma-period")
-  .on("input", function() { changeGraph(quotes,+this.value) })
-}
-
-
-const visualize = quotes => {
-  userInputs(quotes);
+    .on("input", function () { changeGraph(quotes, +this.value) });
+  d3.select("#offset")
+    .on("input", function () {
+      const smaPeriod = +d3.select("#sma-period").property("value");
+      changeGraph(quotes, smaPeriod)
+    });
 }
 
 const analyzeData = quotes => {
-  addSMADetails(quotes,99);
+  addSMA(quotes, 100);
+}
+
+const visualize = quotes => {
+
+  updateChart(quotes, 101)
+  userInputs(quotes);
 }
 
 const main = () => {
@@ -155,4 +166,5 @@ const main = () => {
       visualize(quotes)
     })
 }
+
 window.onload = main;
