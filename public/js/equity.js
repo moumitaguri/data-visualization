@@ -118,22 +118,41 @@ const parseData = ({ Date, Volume, AdjClose, ...numerics }) => {
   return { Date, Time, ...numerics };
 }
 
-const addSMADetails = data => {
+const addSMADetails = (data, smaPeriod) => {
   data.map((val, i) => {
     val.SMA = 0;
-    if (i >= 99)
+    if (i >= smaPeriod)
       val.SMA =
-        data.slice(i - 99, i + 1).reduce((init, val) => init + val.Close, 0) /
-        100;
+        data.slice(i - smaPeriod, i + 1).reduce((init, val) => init + val.Close, 0) /
+        smaPeriod;
   });
 };
 
+const changeGraph = (quotes,smaPeriod) =>{
+  addSMADetails(quotes, smaPeriod);
+  updateChart(quotes)
+}
+
+const userInputs = (quotes) =>{
+  d3.select("#sma-period")
+  .on("input", function() { changeGraph(quotes,+this.value) })
+}
+
+
+const visualize = quotes => {
+  userInputs(quotes);
+}
+
+const analyzeData = quotes => {
+  addSMADetails(quotes,99);
+}
+
 const main = () => {
   d3.csv('data/nifty.csv', parseData)
-    .then((d) => {
-      addSMADetails(d)
-      initChart(d)
-      updateChart(d)
+    .then((quotes) => {
+      analyzeData(quotes)
+      initChart(quotes)
+      visualize(quotes)
     })
 }
 window.onload = main;
