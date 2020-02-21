@@ -113,7 +113,7 @@ const updateChart = (quotes, blocks) => {
 }
 
 const parseData = ({ Date, Volume, AdjClose, ...numerics }) => {
-  _.forEach(numerics, (v, k) => numerics[k] = +v);
+  _.forEach(numerics, (v, k) => numerics[k] = Math.round(+v));
   const Time = new window.Date(Date);
   return { Date, Time, ...numerics };
 }
@@ -122,11 +122,11 @@ const addSMA = (quotes, smaPeriod) => {
   const offset = +d3.select("#offset").property("value");
   quotes.map((val, i) => {
     val.SMA = 0;
-    let blocks = smaPeriod + offset;
+    let blocks = smaPeriod + offset - 2;
     if (i >= blocks)
       val.SMA =
-        quotes.slice(i - blocks, i - offset + 1).reduce((init, val) => init + val.Close, 0) /
-        smaPeriod;
+        Math.round(quotes.slice(i - smaPeriod - offset + 1, i - offset + 1).reduce((init, val) => init + val.Close, 0) /
+          smaPeriod);
   });
 
 };
@@ -148,14 +148,60 @@ const userInputs = (quotes) => {
     });
 }
 
+const algorithm = quotes => {
+  //when to buy => not bought or sold -> findNextDateToBuy => close > sma
+  //when to sell => sma > close
+  //1 transaction => buy -> sell
+
+  let transactions = [];
+  let buys = [];
+  let sales = [];
+  let bought = false;
+  let sold = false;
+  const testableQuotes = _.drop(quotes, 100);
+
+  for (let i = 0; i < testableQuotes.length; i++) {
+    if (bought && testableQuotes[i].SMA > testableQuotes[i].Close) {
+      sales.push(testableQuotes[i]);
+      sold = true;
+      bought = false;
+      transactions.push({ buy: _.last(buys), sale: _.last(sales) });
+    }
+    if ((!bought || sold) && testableQuotes[i].Close > testableQuotes[i].SMA) {
+      buys.push(testableQuotes[i]);
+      bought = true;
+      sold = false;
+    }
+  }
+
+  let lastTransactionDate = _.last(transactions).buy.Date;
+  let lastBuyingDate = _.last(buys).Date;
+
+  if (lastTransactionDate != lastBuyingDate) {
+    transactions.push({ buy: _.last(buys), sale: _.last(testableQuotes).Date })
+  }
+}
+
 const analyzeData = quotes => {
   addSMA(quotes, 100);
 }
 
+const parseTransactions = (transactions) => {
+  return transactions.map(t => {
+    return {
+      buyingDate: t.buy.Date,
+      buyClose: t.buy.Close,
+      buySma: t.buy.SMA,
+      salingDate : t.sale.Date,
+      saleClose : t.sale.Close,
+      saleSma : t.sale.SMA
+    }
+  })
+}
 const visualize = quotes => {
-
   updateChart(quotes, 101)
   userInputs(quotes);
+  algorithm(quotes);
 }
 
 const main = () => {
