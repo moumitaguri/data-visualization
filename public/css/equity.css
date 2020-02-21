@@ -28,3 +28,16 @@ svg {
   height:40px;
   background-color: #eeeef5;
 }
+
+.transactions-table-columns {
+  border: 1px solid black;
+  padding: 15px;
+  background-color: lightgray;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.transactions {
+  border: 1px solid black;
+  padding: 5px;
+}

@@ -148,6 +148,40 @@ const userInputs = (quotes) => {
     });
 }
 
+const drawTransactionTable = (transactions) => {
+  const table = d3.select("#transactions-table");
+  const rows = d3.csvParseRows(d3.csvFormat(transactions));
+  const columnNames = ["Buying Date", "Buy Close", "Buy SMA", "Saling Date", "Sale Close", "Sale Price" ]
+  table.append("thead")
+  .append("tr")
+  .selectAll("th")
+  .data(columnNames)
+  .enter().append("th")
+  .text(function(columnNames) { return columnNames; })
+  .attr("class", "transactions-table-columns");
+
+  table.append("tbody")
+  .selectAll("tr")
+  .data(rows.slice(1))
+  .enter()
+  .append("tr")
+  .selectAll("td")
+  .data(function(d){return d;})
+  .enter()
+  .append("td")
+  .attr("class", "transactions")
+  .on("mouseover", function(){
+    d3.select(this)
+      .style("background-color", "powderblue");
+})
+  .on("mouseout", function(){
+  d3.select(this).style("background-color", "white");
+})
+  .text(function(d){return d;})
+  .style("font-size", "12px");
+
+}
+
 const algorithm = quotes => {
   //when to buy => not bought or sold -> findNextDateToBuy => close > sma
   //when to sell => sma > close
@@ -178,8 +212,10 @@ const algorithm = quotes => {
   let lastBuyingDate = _.last(buys).Date;
 
   if (lastTransactionDate != lastBuyingDate) {
-    transactions.push({ buy: _.last(buys), sale: _.last(testableQuotes).Date })
+    transactions.push({ buy: _.last(buys), sale: _.last(testableQuotes) })
   }
+  const parsedTransactions = parseTransactions(transactions);
+  drawTransactionTable(parsedTransactions);
 }
 
 const analyzeData = quotes => {
