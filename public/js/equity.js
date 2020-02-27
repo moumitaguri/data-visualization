@@ -113,7 +113,7 @@ const updateChart = (quotes, blocks) => {
 }
 
 const parseData = ({ Date, Volume, AdjClose, ...numerics }) => {
-  _.forEach(numerics, (v, k) => numerics[k] = Math.round(+v));
+  _.forEach(numerics, (v, k) => numerics[k] = _.round(+v));
   const Time = new window.Date(Date);
   return { Date, Time, ...numerics };
 }
@@ -125,7 +125,7 @@ const addSMA = (quotes, smaPeriod) => {
     let blocks = smaPeriod + offset - 2;
     if (i >= blocks)
       val.SMA =
-        Math.round(quotes.slice(i - smaPeriod - offset + 1, i - offset + 1).reduce((init, val) => init + val.Close, 0) /
+        _.round(quotes.slice(i - smaPeriod - offset + 1, i - offset + 1).reduce((init, val) => init + val.Close, 0) /
           smaPeriod);
   });
 
@@ -151,34 +151,34 @@ const userInputs = (quotes) => {
 const drawTransactionTable = (transactions) => {
   const table = d3.select("#transactions-table");
   const rows = d3.csvParseRows(d3.csvFormat(transactions));
-  const columnNames = ["Buying Date", "Buy Close", "Buy SMA", "Saling Date", "Sale Close", "Sale Price" ]
+  const columnNames = ["Buying Date", "Buy Close", "Buy SMA", "Saling Date", "Sale Close", "Sale SMA", "Profit", "Verdict"];
   table.append("thead")
-  .append("tr")
-  .selectAll("th")
-  .data(columnNames)
-  .enter().append("th")
-  .text(function(columnNames) { return columnNames; })
-  .attr("class", "transactions-table-columns");
+    .append("tr")
+    .selectAll("th")
+    .data(columnNames)
+    .enter().append("th")
+    .text(function (columnNames) { return columnNames; })
+    .attr("class", "transactions-table-columns");
 
   table.append("tbody")
-  .selectAll("tr")
-  .data(rows.slice(1))
-  .enter()
-  .append("tr")
-  .selectAll("td")
-  .data(function(d){return d;})
-  .enter()
-  .append("td")
-  .attr("class", "transactions")
-  .on("mouseover", function(){
-    d3.select(this)
-      .style("background-color", "powderblue");
-})
-  .on("mouseout", function(){
-  d3.select(this).style("background-color", "white");
-})
-  .text(function(d){return d;})
-  .style("font-size", "12px");
+    .selectAll("tr")
+    .data(rows.slice(1))
+    .enter()
+    .append("tr")
+    .selectAll("td")
+    .data(function (d) { return d; })
+    .enter()
+    .append("td")
+    .attr("class", "transactions")
+    .on("mouseover", function () {
+      d3.select(this)
+        .style("background-color", "powderblue");
+    })
+    .on("mouseout", function () {
+      d3.select(this).style("background-color", "white");
+    })
+    .text(function (d) { return d; })
+    .style("font-size", "12px");
 
 }
 
@@ -214,8 +214,9 @@ const algorithm = quotes => {
   if (lastTransactionDate != lastBuyingDate) {
     transactions.push({ buy: _.last(buys), sale: _.last(testableQuotes) })
   }
-  const parsedTransactions = parseTransactions(transactions);
-  drawTransactionTable(parsedTransactions);
+  return parseTransactions(transactions);
+  // const parsedTransactions = parseTransactions(transactions);
+  // drawTransactionTable(parsedTransactions);
 }
 
 const analyzeData = quotes => {
@@ -228,16 +229,74 @@ const parseTransactions = (transactions) => {
       buyingDate: t.buy.Date,
       buyClose: t.buy.Close,
       buySma: t.buy.SMA,
-      salingDate : t.sale.Date,
-      saleClose : t.sale.Close,
-      saleSma : t.sale.SMA
+      salingDate: t.sale.Date,
+      saleClose: t.sale.Close,
+      saleSma: t.sale.SMA,
+      profit: t.sale.Close - t.buy.Close,
+      verdict: (t.sale.Close - t.buy.Close) > 0 ? "win" : "loss"
     }
   })
 }
+
+const observe = (transactions) => {
+  const noOfTransactions = transactions.length;
+  const wins = transactions.filter(t => t.verdict == "win");
+  const losses = transactions.filter(t => t.verdict == "loss");
+  const totalWins = wins.length;
+  const totalLosses = losses.length;
+  const winPercentage = _.round(totalWins / noOfTransactions * 100, 2);
+  const lossPercentage = _.round(totalLosses / noOfTransactions * 100, 2);
+  const totalWinAmount = wins.reduce((amount, transaction) => amount + transaction.profit, 0);
+  const totalLossAmount = losses.reduce((amount, transaction) => amount - transaction.profit, 0);
+  const avgWinSize = _.round(totalWinAmount / totalWins);
+  const avgLossSize = _.round(totalLossAmount / totalLosses);
+  const net = totalWinAmount - totalLossAmount;
+  const winMultiple = _.round((avgWinSize / avgLossSize), 2);
+  const lossMultiple = _.round((totalLosses / totalWins), 2);
+  const expectancy = _.round(totalWinAmount / noOfTransactions);
+
+  const observations = {
+    noOfTransactions,
+    wins,
+    losses,
+    totalWins,
+    totalLosses,
+    winPercentage,
+    lossPercentage,
+    totalWinAmount,
+    totalLossAmount,
+    avgWinSize,
+    avgLossSize,
+    net,
+    winMultiple,
+    lossMultiple,
+    expectancy
+  }
+  // console.log(noOfTransactions, "no. of transactions");
+  // console.log(totalWins, "no. of wins");
+  // console.log(totalLosses, "no. of losses");
+  // console.log(winPercentage, "win %");
+  // console.log(lossPercentage, "loss %");
+  // console.log(totalWinAmount, "total win amount");
+  // console.log(totalLossAmount, "total loss amount");
+  // console.log(avgWinSize, "avg win size");
+  // console.log(avgLossSize, "avg loss size");
+  // console.log(net, "net amount");
+  // console.log(winMultiple, "win multiple");
+  // console.log(lossMultiple, "loss multiple");
+  // console.log(expectancy, "expectancy");
+
+  return observations;
+}
+
+
 const visualize = quotes => {
   updateChart(quotes, 101)
   userInputs(quotes);
-  algorithm(quotes);
+  const transactions = algorithm(quotes);
+  drawTransactionTable(transactions);
+  const observations = observe(transactions);
+  console.log(observations)
 }
 
 const main = () => {
